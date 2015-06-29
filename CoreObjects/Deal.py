@@ -48,7 +48,7 @@ class Deal(object):
         self.filtered_quotes = pd.DataFrame()
         # Filled from quotes_queue
         self.queue = pd.DataFrame()
-        
+
 
 
 
