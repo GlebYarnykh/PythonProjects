@@ -7,7 +7,6 @@ import numpy as np
 client_id_map_path = ""
 client_id_map = client_names_parser(client_id_map_path)
 
-
 class Deal(object):
     def __init__(self, client_id, user_deal_id, requested_lot, requested_price, hedging_group,
                  side, ccy_pair, flags, comment_text, minimum_lot):

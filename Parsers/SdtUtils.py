@@ -20,3 +20,10 @@ def client_names_parser(path):
     id_name_map = id_name_map.loc[:, included_columns]
     id_name_map.set_index("Id", inplace=True)
     return id_name_map
+
+def client_groups_parser(path):
+    id_name_map = pd.read_csv(path)
+    included_columns = ["Id", "Name"]
+    id_name_map = id_name_map.loc[:, included_columns]
+    id_name_map.set_index("Id", inplace=True)
+    return id_name_map
