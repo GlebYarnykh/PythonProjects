@@ -2,7 +2,7 @@ __author__ = 'ruayhg'
 from Parsers.SdtUtils import get_sdt_side, client_names_parser, client_groups_parser
 from Parsers.SdtUtils import get_sdt_deal_flags_representation
 from Parsers.SdtUtils import root_path
-
+from datetime import datetime
 import pandas as pd
 import numpy as np
 
@@ -29,5 +29,5 @@ class Order(object):
         self.side = get_sdt_side(side)
 
 if __name__ == "__main__":
-    order = Order(9, 155, 100000, 51.515, 5, 1, "USD/RUB_TOM", 1, "HUY V ROT NA", 10000)
-    print(order.hedging_group, order.client_comment_text)
+    order = Order(datetime(2015,6,26,15,0), datetime(2015,6,26,15,0), 9, 155, 100000, 51.515, 1, "USD/RUB_TOM", 1, "HUY V ROT NA", 10000)
+    print(order.client_comment_text)

@@ -1,3 +1,4 @@
+from CoreObjects.MethodsExecutionTime import MethodsExecutionTime
 from Parsers.SdtUtils import get_sdt_side, client_names_parser, client_groups_parser, root_path
 from Parsers.SdtUtils import get_sdt_deal_flags_representation
 import pandas as pd
@@ -6,15 +7,16 @@ import numpy as np
 client_groups_map_path = root_path + 'GlobalLogsToRead\\client_group_map.csv'
 client_groups_map = client_groups_parser(client_groups_map_path)
 
+
 class Deal(object):
     def __init__(self, order):
         # Initial part from first "Deal" entree - Order Class
         self.order = order
         # Filled on each line
-        self.methods_execution_time = pd.DataFrame()
+        self.methods_execution_time = MethodsExecutionTime(order.exact_time)
         # Filled from client_trade logs
-        self.order_id = None
         self.hedging_group = None
+        self.order_id = None
         self.aggr_id = None
         self.set_time = None
         self.change_time = None
@@ -40,8 +42,4 @@ class Deal(object):
 
     def set_hedging_group(self, hedge_group_int):
         self.hedging_group = client_groups_map.loc[hedge_group_int, 'Name']
-
-
-
-
 
