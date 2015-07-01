@@ -1,10 +1,10 @@
-from Parsers.SdtUtils import get_sdt_side, client_names_parser
+from Parsers.SdtUtils import get_sdt_side, client_names_parser, client_groups_parser, root_path
 from Parsers.SdtUtils import get_sdt_deal_flags_representation
 import pandas as pd
 import numpy as np
 
-client_id_map_path = ""
-client_id_map = client_names_parser(client_id_map_path)
+client_groups_map_path = root_path + 'GlobalLogsToRead\\client_group_map.csv'
+client_groups_map = client_groups_parser(client_groups_map_path)
 
 class Deal(object):
     def __init__(self, order):
@@ -14,6 +14,7 @@ class Deal(object):
         self.methods_execution_time = pd.DataFrame()
         # Filled from client_trade logs
         self.order_id = None
+        self.hedging_group = None
         self.aggr_id = None
         self.set_time = None
         self.change_time = None
@@ -36,6 +37,9 @@ class Deal(object):
         self.filtered_quotes = pd.DataFrame()
         # Filled from quotes_queue
         self.queue = pd.DataFrame()
+
+    def set_hedging_group(self, hedge_group_int):
+        self.hedging_group = client_groups_map.loc[hedge_group_int, 'Name']
 
 
 
