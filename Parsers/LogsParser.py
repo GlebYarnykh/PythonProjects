@@ -26,21 +26,43 @@ def client_parser(client_logs_path, year, month, day):
 def fill_client_deal_part(row, deal):
     if ('selected group' in row) and (deal.hedging_group is None):
         parse_hedging_group(deal, row)
+        return None
     elif ('order_id: ' in row) and (deal.order_id is None):
         parse_order_id(deal, row)
+        return None
+    elif ('LocalOrders: SendOrderToSubscribers' in row) and (deal.aggr_id is None):
+        parse_aggr_id_set_change_time(deal,row)
+        return None
+
+'00| 08:14:14.374 21595390.966659 ->   LocalOrders: SendOrderToSubscribers, action: 1, FXBA::V2::ORDER::ENTRY:' \
+' id = 10099850, action = 1, instr_name = EUR/USD, aggr_id = 10099850, external_id = , ifoco_params = , src_name = RZBM, ' \
+'trader = acbk.bbg, side = 0, lot = 50000.000000, executed_lot = 0.000000, leaves_lot = 50000.000000, price = 1.118520,' \
+' set_time = 130797692543744290, change_time = 130797692543744290, status = 2, user_order_id = F-69287, aggr_src_name = RZBM, ' \
+'avg_exec_price = 0.000000, show_lot = 1000000000000.000000, exec_type = 5, tif = 1, tif_time = 0, flags = 1, ' \
+'comment_text = |FIX|, ver = 0, uid = 0, client_id = 183, min_lot = 0.000000'
+def parse_aggr_id_set_change_time(deal, row):
+    fill_method_execution_time(deal, row, 'Generate Order')
+    aggr_id = int(re.search('aggr_id = (.+?),', row))
+    set_time = int(re.search('set_time = (.+?),', row))
+    change_time = int(re.search('set_time = (.+?),', row))
+    deal.aggr_id, deal.set_time, deal.change_time = aggr_id, set_time, change_time
 
 '00| 08:14:14.374 21595390.966573 ->   	 order_id: 10099850'
 def parse_order_id(deal, row):
+    fill_method_execution_time(deal, row, 'Generating Order Id')
     order_id = int(re.search('order_id: (.+?)', row))
     deal.order_id = order_id
 
 '00| 08:14:14.374 21595390.966803 ->     selected group 8'
 def parse_hedging_group(deal, row):
-    exact_time = float(row.split('->')[0].split(' ')[2])
-    deal.add_sdt_method_execution_time({'Entry type': 'selecting group', 'Time': exact_time})
-    group = int(re.findall('selected group (.+?)', row)[0])
+    fill_method_execution_time(deal, row, 'Choosing Hedging Group')
+    group = int(re.search('selected group (.+?)', row))
     deal.set_hedging_group(group)
 
+
+def fill_method_execution_time(deal, row, type_name):
+    exact_time = float(row.split('->')[0].split(' ')[2])
+    deal.methods_execution_time.add_sdt_method_execution_time(type_name, exact_time)
 
 '00| 08:14:14.374 21595390.966549 ->   LocalOrders: Deal, LocalOrdersTypes::DEAL::REQ: FXBA::V2::DEAL::REQ: src_name = RZBM, ' \
 'instr_name = EUR/USD, side = 0, lot = 50000.000000, price = 1.118520, user_deal_id = F-69287, client_id = 183, flags = 1, ' \
@@ -67,6 +89,7 @@ def parse_initial_order(row, year, month, day):
         return initial_order
     else:
         return 'False'
+
 
 if __name__ == "__main__":
     path = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
