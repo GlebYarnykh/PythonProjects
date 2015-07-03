@@ -21,13 +21,13 @@ def client_parser(client_logs_path, year, month, day):
         deal = Deal(order)
         deal_array = local_orders.loc[starting_index:(starting_index + 500), 0]
         for j, row in deal_array.iteritems():
-            print(row)
             status = fill_client_deal_part(row, deal)
             if status == 'End of Deal':
                 print(status)
                 break
-            else:
+            elif j==499 and deal.executed_lot is None:
                 print("Need more raws")
+                print(row)
     path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
     limit_orders = pd.read_csv(path_for_Limit_orders, sep=":;", header=None)
 
