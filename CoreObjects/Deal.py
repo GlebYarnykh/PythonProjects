@@ -13,7 +13,7 @@ class Deal(object):
         # Initial part from first "Deal" entree - Order Class
         self.order = order
         # Filled on each line
-        self.methods_execution_time = MethodsExecutionTime(order.exact_time)
+        self.methods_time = MethodsExecutionTime(order.exact_time)
         # Filled from client_trade logs
         self.hedging_group = None
         self.order_id = None

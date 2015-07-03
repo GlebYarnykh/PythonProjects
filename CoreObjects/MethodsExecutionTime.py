@@ -1,8 +1,6 @@
 __author__ = 'ruayhg'
-from Parsers.SdtUtils import get_sdt_side, client_names_parser, client_groups_parser, root_path
-from Parsers.SdtUtils import get_sdt_deal_flags_representation
 import pandas as pd
-import numpy as np
+
 
 class MethodsExecutionTime(object):
     def __init__(self, order_exact_time):

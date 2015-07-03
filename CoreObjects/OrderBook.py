@@ -40,8 +40,8 @@ class OrderBook(object):
 
     def add_quote(self, quote):
         if quote.Side == "Bid":
-            self.bid_side.quotes.append(quote)
+            self.bid_side.quotes = self.bid_side.quotes.append(quote)
             self.bid_side.quotes.sort(columns='Price', axis=0, ascending=True)
         elif quote.Side == "Ask":
-            self.ask_side.quotes.append(quote)
+            self.ask_side.quotes = self.ask_side.quotes.append(quote)
             self.ask_side.quotes.sort(columns='Price', axis=0, ascending=False)
