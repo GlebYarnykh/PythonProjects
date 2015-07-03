@@ -6,8 +6,10 @@ root_path = 'C:\\Users\\ruayhg\\PycharmProjects\\PythonProjects\\'
 def get_sdt_side(side_int):
     if side_int == 0:
         return "Buy"
-    else:
+    elif side_int ==1:
         return "Sell"
+    else:
+        return "Unknown side"
 
 def get_sdt_deal_flags_representation(flag_int):
     if flag_int == 0:

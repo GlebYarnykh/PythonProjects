@@ -10,7 +10,6 @@ class MethodsExecutionTime(object):
         methods_execution_time = methods_execution_time.append(
             {'Entry type': 'Initial order', 'Time': order_exact_time},
             ignore_index = True)
-        methods_execution_time.set_index('En')
         self.methods_execution_time = methods_execution_time
 
     def add_sdt_method_execution_time(self, entry_type, time):

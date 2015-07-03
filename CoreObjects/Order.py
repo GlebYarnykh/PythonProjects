@@ -8,7 +8,7 @@ import numpy as np
 
 client_id_map_path = root_path + 'GlobalLogsToRead\\client_id_map.csv'
 client_id_map = client_names_parser(client_id_map_path)
-
+client_id_map.loc[1, "Name"] = "NullClient"
 
 class Order(object):
     def __init__(self, ms_time, exact_time, client_id, user_deal_id, requested_lot, requested_price,
@@ -29,5 +29,5 @@ class Order(object):
         self.side = get_sdt_side(side)
 
 if __name__ == "__main__":
-    order = Order(datetime(2015,6,26,15,0), datetime(2015,6,26,15,0), 9, 155, 100000, 51.515, 1, "USD/RUB_TOM", 1, "HUY V ROT NA", 10000)
+    order = Order(False, datetime(2015,6,26,15,0), datetime(2015,6,26,15,0), 9, 155, 100000, 51.515, 1, "USD/RUB_TOM", 1, "HUY V ROT NA", 10000)
     print(order.client_comment_text)

@@ -1,3 +1,4 @@
+from CoreObjects.ClientQuote import create_client_quote
 from CoreObjects.Deal import Deal
 from CoreObjects.Order import Order
 
@@ -13,14 +14,37 @@ import re
 def client_parser(client_logs_path, year, month, day):
     path = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
     local_orders = pd.read_csv(path, sep=":;", header=None)
-    local_orders['Order'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
-    order_indices = local_orders[local_orders['Order'] != 'False'].index
+    local_orders['Order'], local_orders['isOrder'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
+    order_indices = local_orders[local_orders['isOrder'] != True].index
     for starting_index in order_indices:
-        order = local_order.loc[starting_index, 'Order']
+        order = local_orders.loc[starting_index, 'Order']
         deal = Deal(order)
         deal_array = local_orders.loc[starting_index:(starting_index+100), 0]
-        for j, row in deal_array.iterrows():
+        for j, row in deal_array.iteritems():
             fill_client_deal_part(row, deal)
+
+
+'00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
+'price = 1.118420, volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
+def parse_best_side_quote(deal, row):
+    fill_method_execution_time(deal, row, "Best Side")
+    id = int(re.search('id = (.+?),', row).group(1))
+    side = int(re.search('type = (.+?),', row).group(1))
+    price = float(re.search('price = (.+?),', row).group(1))
+    instrument = deal.order.ccy_pair
+    book_type = int(re.search('flags = (.+?),', row).group(1))
+    size = float(re.search('volume = (.+?),', row).group(1))
+    client_quote = create_client_quote(id, side, price, instrument, book_type, size)
+    if client_quote.Side == 'Bid':
+        deal.best_bid = client_quote
+    elif client_quote.Side == 'Ask':
+        deal.best_ask = client_quote
+    else:
+        pass
+
+
+def parse_book_quote(deal, row):
+    pass
 
 
 def fill_client_deal_part(row, deal):
@@ -33,6 +57,12 @@ def fill_client_deal_part(row, deal):
     elif ('LocalOrders: SendOrderToSubscribers' in row) and (deal.aggr_id is None):
         parse_aggr_id_set_change_time(deal,row)
         return None
+    elif 'exist = ' in row:
+        parse_best_side_quote(deal, row)
+        return None
+    elif ('exist = ' not in row) and ():
+        parse_book_quote(deal,row)
+        return None
 
 '00| 08:14:14.374 21595390.966659 ->   LocalOrders: SendOrderToSubscribers, action: 1, FXBA::V2::ORDER::ENTRY:' \
 ' id = 10099850, action = 1, instr_name = EUR/USD, aggr_id = 10099850, external_id = , ifoco_params = , src_name = RZBM, ' \
@@ -42,21 +72,21 @@ def fill_client_deal_part(row, deal):
 'comment_text = |FIX|, ver = 0, uid = 0, client_id = 183, min_lot = 0.000000'
 def parse_aggr_id_set_change_time(deal, row):
     fill_method_execution_time(deal, row, 'Generate Order')
-    aggr_id = int(re.search('aggr_id = (.+?),', row))
-    set_time = int(re.search('set_time = (.+?),', row))
-    change_time = int(re.search('set_time = (.+?),', row))
+    aggr_id = int(re.search('aggr_id = (.+?),', row).group(1))
+    set_time = int(re.search('set_time = (.+?),', row).group(1))
+    change_time = int(re.search('set_time = (.+?),', row).group(1))
     deal.aggr_id, deal.set_time, deal.change_time = aggr_id, set_time, change_time
 
 '00| 08:14:14.374 21595390.966573 ->   	 order_id: 10099850'
 def parse_order_id(deal, row):
     fill_method_execution_time(deal, row, 'Generating Order Id')
-    order_id = int(re.search('order_id: (.+?)', row))
+    order_id = int(re.search('order_id: (.+?)', row).group(1))
     deal.order_id = order_id
 
 '00| 08:14:14.374 21595390.966803 ->     selected group 8'
 def parse_hedging_group(deal, row):
     fill_method_execution_time(deal, row, 'Choosing Hedging Group')
-    group = int(re.search('selected group (.+?)', row))
+    group = int(re.search('selected group (.+?)', row).group(1))
     deal.set_hedging_group(group)
 
 
@@ -75,25 +105,27 @@ def parse_initial_order(row, year, month, day):
         ms_time = datetime.strptime(first[1], '%H:%M:%S.%f').replace(year=year, month=month, day=day)
         exact_time = float(first[2])
 
-        instrument = re.search('instr_name = (.+?),', row)
-        side = re.search('side = (.+?),', row)
-        requested_lot = float(re.search('lot = (.+?),', row))
-        requested_price = float(re.search('price = (.+?),', row))
-        used_deal_id = int(re.search('user_deal_id = (.+?),', row))
-        client_id = int(re.search('client_id = (.+?),', row))
-        flags = int(re.search('flags = (.+?),', row))
-        comment_text = re.search('comment_text = (.+?),', row)
-        min_lot = float(re.search('min_lot = (.+?);', row))
+        instrument = re.search('instr_name = (.+?),', row).group(1)
+        side = re.search('side = (.+?),', row).group(1)
+        requested_lot = float(re.search('lot = (.+?),', row).group(1))
+        requested_price = float(re.search('price = (.+?),', row).group(1))
+        used_deal_id = re.search('user_deal_id = (.+?),', row).group(1)
+        client_id = int(re.search('client_id = (.+?),', row).group(1))
+        flags = int(re.search('flags = (.+?),', row).group(1))
+        comment_text = re.search('comment_text = (.+?),', row).group(1)
+        min_lot = float(re.search('min_lot = (.+?);', row).group(1))
         initial_order = Order(ms_time, exact_time, client_id, used_deal_id, requested_lot, requested_price,
                               side, instrument, flags, comment_text, min_lot)
-        return initial_order
+        return initial_order, False
     else:
-        return 'False'
-
+        return Order(None, None, 1, None, None, None, None, None, None,
+                     None, None), True
 
 if __name__ == "__main__":
-    path = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
-    local_order = pd.read_csv(path, sep=":;", header=None)
-    local_order['Order'] = np.vectorize(parse_initial_order)(local_order[0], 2015, 6, 26)
-    local_order.loc[local_order['Order'] != 'False'].head()
+    year = 2015
+    month = 6
+    day = 26
+    client_logs_path = "HUY"
+    client_parser(client_logs_path, year, month, day)
+
 
