@@ -15,14 +15,16 @@ import re
 def client_parser(client_logs_path, year, month, day):
     path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
     local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
-    local_orders['Order'], local_orders['isOrder'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
-    order_indices = local_orders[local_orders['isOrder'] != True].index
+    local_orders['Order'], local_orders['isIOCOrder'], local_orders['OrderId'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
+    order_indices = local_orders[local_orders['isIOCOrder'] == True].index
     for starting_index in order_indices:
         order = local_orders.loc[starting_index, 'Order']
         deal = Deal(order)
         deal_array = local_orders.loc[starting_index:(starting_index+200), 0]
         for j, row in deal_array.iteritems():
-            fill_client_deal_part(row, deal)
+            status = fill_client_deal_part(row, deal)
+            if status == 'End of Deal':
+                break
     path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
     limit_orders =  pd.read_csv(path_for_Limit_orders, sep=":;", header=None)
 
@@ -74,7 +76,7 @@ def fill_client_deal_part(row, deal):
         return None
     elif ('LocalOrders: ---- FXBA::V2::ORDER::ENTRY:' in row):
         parse_end_of_deal(deal,row)
-        return None
+        return 'End of Deal'
 
 '00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
 'price = 1.118420, volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
@@ -176,14 +178,15 @@ def parse_initial_order(row, year, month, day):
         min_lot = float(re.search('min_lot = (.+?);', row).group(1))
         initial_order = Order(ms_time, exact_time, client_id, used_deal_id, requested_lot, requested_price,
                               side, instrument, flags, comment_text, min_lot)
-        return initial_order, False, 0
+        return initial_order, True, 0
     elif "LocalOrders: order ready to exec, order_id" in row:
-        order_id = int(re.search('order_id: (.+?)', row).group(1))
+        '00| 15:19:12.043 21620887.964262 ->   LocalOrders: order ready to exec, order_id = 10114436'
+        order_id = int(re.search('order_id = (.+?)', row).group(1))
         return Order(None, None, 1, None, None, None, None, None, None,
-                     None, None), True, order_id
+                     None, None), False, order_id
     else:
         return Order(None, None, 1, None, None, None, None, None, None,
-                     None, None), True, 0
+                     None, None), False, 0
 
 if __name__ == "__main__":
     year = 2015
