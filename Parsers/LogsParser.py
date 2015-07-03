@@ -12,8 +12,8 @@ import re
 
 
 def client_parser(client_logs_path, year, month, day):
-    path = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
-    local_orders = pd.read_csv(path, sep=":;", header=None)
+    path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
+    local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
     local_orders['Order'], local_orders['isOrder'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
     order_indices = local_orders[local_orders['isOrder'] != True].index
     for starting_index in order_indices:
@@ -22,6 +22,8 @@ def client_parser(client_logs_path, year, month, day):
         deal_array = local_orders.loc[starting_index:(starting_index+100), 0]
         for j, row in deal_array.iteritems():
             fill_client_deal_part(row, deal)
+    path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
+    limit_orders =  pd.read_csv(path_for_Limit_orders, sep=":;", header=None)
 
 
 '00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
@@ -44,7 +46,9 @@ def parse_best_side_quote(deal, row):
 
 
 def parse_book_quote(deal, row):
-    pass
+    fill_method_execution_time(deal, row, "Get Quote")
+
+
 
 
 def fill_client_deal_part(row, deal):
@@ -117,6 +121,9 @@ def parse_initial_order(row, year, month, day):
         initial_order = Order(ms_time, exact_time, client_id, used_deal_id, requested_lot, requested_price,
                               side, instrument, flags, comment_text, min_lot)
         return initial_order, False
+    elif "LocalOrders: order ready to exec, order_id" in row:
+        order_id = int(re.search('order_id: (.+?)', row).group(1))
+        return Order
     else:
         return Order(None, None, 1, None, None, None, None, None, None,
                      None, None), True
