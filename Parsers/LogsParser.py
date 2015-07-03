@@ -15,7 +15,7 @@ import re
 def client_parser(client_logs_path, year, month, day):
     path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
     local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
-    local_orders['Order'], local_orders['isIOCOrder'], local_orders['OrderId'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
+    local_orders['Order'], local_orders['isIOCOrder'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
     order_indices = local_orders[local_orders['isIOCOrder'] == True].index
     for starting_index in order_indices:
         order = local_orders.loc[starting_index, 'Order']
@@ -178,15 +178,15 @@ def parse_initial_order(row, year, month, day):
         min_lot = float(re.search('min_lot = (.+?);', row).group(1))
         initial_order = Order(ms_time, exact_time, client_id, used_deal_id, requested_lot, requested_price,
                               side, instrument, flags, comment_text, min_lot)
-        return initial_order, True, 0
-    elif "LocalOrders: order ready to exec, order_id" in row:
-        '00| 15:19:12.043 21620887.964262 ->   LocalOrders: order ready to exec, order_id = 10114436'
-        order_id = int(re.search('order_id = (.+?)', row).group(1))
-        return Order(None, None, 1, None, None, None, None, None, None,
-                     None, None), False, order_id
+        return initial_order, True
+    # elif "LocalOrders: order ready to exec, order_id" in row:
+    #     '00| 15:19:12.043 21620887.964262 ->   LocalOrders: order ready to exec, order_id = 10114436'
+    #     order_id = int(re.search('order_id = (.+?)', row).group(1))
+    #     return Order(None, None, 1, None, None, None, None, None, None,
+    #                  None, None), False, order_id
     else:
         return Order(None, None, 1, None, None, None, None, None, None,
-                     None, None), False, 0
+                     None, None), False
 
 if __name__ == "__main__":
     year = 2015
