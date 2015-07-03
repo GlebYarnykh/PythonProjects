@@ -23,10 +23,11 @@ class Deal(object):
         self.best_bid = None
         self.best_ask = None
         self.price_tolerance = None
-        self.client_bids = pd.DataFrame()
-        self.client_asks = pd.DataFrame()
+        self.client_book = None
         self.do_not_validate = False
         self.no_better_prices = False
+        self.quote_lifetime = None
+        self.validation_price = None
         self.executed_lot = None
         self.executed_price = None
         # Filled from aggr_trade logs

@@ -1,6 +1,7 @@
 from CoreObjects.ClientQuote import create_client_quote
 from CoreObjects.Deal import Deal
 from CoreObjects.Order import Order
+from CoreObjects.OrderBook import OrderBook
 
 __author__ = 'ruayhg'
 
@@ -12,39 +13,35 @@ import re
 
 
 def client_parser(client_logs_path, year, month, day):
-    path = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
-    local_orders = pd.read_csv(path, sep=":;", header=None)
+    path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
+    local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
     local_orders['Order'], local_orders['isOrder'] = np.vectorize(parse_initial_order)(local_orders[0], year, month, day)
     order_indices = local_orders[local_orders['isOrder'] != True].index
     for starting_index in order_indices:
         order = local_orders.loc[starting_index, 'Order']
         deal = Deal(order)
-        deal_array = local_orders.loc[starting_index:(starting_index+100), 0]
+        deal_array = local_orders.loc[starting_index:(starting_index+200), 0]
         for j, row in deal_array.iteritems():
             fill_client_deal_part(row, deal)
+    path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
+    limit_orders =  pd.read_csv(path_for_Limit_orders, sep=":;", header=None)
 
 
-'00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
-'price = 1.118420, volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
-def parse_best_side_quote(deal, row):
-    fill_method_execution_time(deal, row, "Best Side")
-    id = int(re.search('id = (.+?),', row).group(1))
-    side = int(re.search('type = (.+?),', row).group(1))
-    price = float(re.search('price = (.+?),', row).group(1))
-    instrument = deal.order.ccy_pair
-    book_type = int(re.search('flags = (.+?),', row).group(1))
-    size = float(re.search('volume = (.+?),', row).group(1))
-    client_quote = create_client_quote(id, side, price, instrument, book_type, size)
-    if client_quote.Side == 'Bid':
-        deal.best_bid = client_quote
-    elif client_quote.Side == 'Ask':
-        deal.best_ask = client_quote
-    else:
-        pass
+def parse_validation_price(deal, row):
+    fill_method_execution_time(deal, row, "Validate Price")
+    deal.validation_price = float(re.search(' price = (.+?)', row).group(1))
 
-
-def parse_book_quote(deal, row):
-    pass
+'00| 09:53:58.249 21601374.672032 ->   LocalOrders: ---- FXBA::V2::ORDER::ENTRY: id = 10100160, action = 1, ' \
+'instr_name = USD/RUB_TOM, aggr_id = 10100160, external_id = , ifoco_params = , src_name = RZBM, trader = psbf.api,' \
+' side = 1, lot = 500000.000000, executed_lot = 0.000000, leaves_lot = 500000.000000, price = 54.837000, ' \
+'set_time = 130797752372358140, change_time = 130797752372358140, status = 2, user_order_id = F2-153583, ' \
+'aggr_src_name = RZBM, avg_exec_price = 0.000000, show_lot = 1000000000000.000000, exec_type = 5, tif = 1, ' \
+'tif_time = 0, flags = 0, comment_text = |FIX|, ver = 0, uid = 0, client_id = 109, min_lot = 0.000000'
+def parse_end_of_deal(deal, row):
+    fill_method_execution_time(deal, row, "End of Deal")
+    executed_lot = float(re.search(' executed_lot = (.+?)', row).group(1))
+    executed_price = float(re.search(' avg_exec_price = (.+?)', row).group(1))
+    deal.executed_lot, deal.executed_price = executed_lot, executed_price
 
 
 def fill_client_deal_part(row, deal):
@@ -60,9 +57,72 @@ def fill_client_deal_part(row, deal):
     elif 'exist = ' in row:
         parse_best_side_quote(deal, row)
         return None
-    elif ('exist = ' not in row) and ():
-        parse_book_quote(deal,row)
+    elif 'price_tolerance =' in row:
+        parse_tolerance(deal, row)
         return None
+    elif ('exist = ' not in row) and ('FXBA::V2::BOOK2::ENTRY' in row):
+        parse_book_quote(deal, row)
+        return None
+    elif ('process no better prices' in row):
+        parse_no_better_prices(deal,row)
+        return None
+    elif ('LocalOrders: src deal: quote time (ms)' in row):
+        parse_quote_time(deal, row)
+        return None
+    elif ('LocalOrders: src deal: LocalOrdersTypes::DEAL::REQ: FXBA::V2::DEAL::REQ:' in row):
+        parse_validation_price(deal, row)
+        return None
+    elif ('LocalOrders: ---- FXBA::V2::ORDER::ENTRY:' in row):
+        parse_end_of_deal(deal,row)
+        return None
+
+'00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
+'price = 1.118420, volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
+def parse_best_side_quote(deal, row):
+    fill_method_execution_time(deal, row, "Best Side")
+    id = int(re.search('id = (.+?),', row).group(1))
+    side = int(re.search('type = (.+?),', row).group(1))
+    price = float(re.search(' price = (.+?),', row).group(1))
+    instrument = deal.order.ccy_pair
+    book_type = int(re.search('flags = (.+?),', row).group(1))
+    size = float(re.search('volume = (.+?),', row).group(1))
+    client_quote = create_client_quote(id, side, price, instrument, book_type, size)
+    deal.client_book = OrderBook(book_type, "ClientBook")
+    if client_quote.Side == 'Bid':
+        deal.best_bid = client_quote
+    elif client_quote.Side == 'Ask':
+        deal.best_ask = client_quote
+    else:
+        pass
+
+'00| 08:14:14.390 21595390.966991 ->   FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, price = 1.118420, ' \
+'volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
+def parse_book_quote(deal, row):
+    fill_method_execution_time(deal, row, "Get Quote")
+    id = int(re.search('id = (.+?),', row).group(1))
+    side = int(re.search('type = (.+?),', row).group(1))
+    price = float(re.search(' price = (.+?),', row).group(1))
+    instrument = deal.order.ccy_pair
+    book_type = int(re.search('flags = (.+?),', row).group(1))
+    size = float(re.search('volume = (.+?),', row).group(1))
+    client_quote = create_client_quote(id, side, price, instrument, book_type, size)
+    deal.client_book.add_quote(client_quote)
+
+'00| 08:14:14.374 21595390.966874 ->   price_tolerance = 0.000005'
+def parse_tolerance(deal, row):
+    fill_method_execution_time(deal, row, "Get Tolerance")
+    deal.price_tolerance = float(re.search('price_tolerance = (.+?)', row).group(1))
+
+'00| 08:14:14.390 21595390.967246 ->   	process no better prices'
+def parse_no_better_prices(deal, row):
+    fill_method_execution_time(deal, row, "No better prices")
+    deal.no_better_prices = True
+
+'00| 09:53:57.235 21601373.667698 ->   LocalOrders: src deal: quote time (ms): 1981'
+def parse_quote_time(deal, row):
+    fill_method_execution_time(deal, row, "Quote Lifetime")
+    deal.quote_lifetime = float(re.search('quote time (ms): (.+?)', row).group(1))
+
 
 '00| 08:14:14.374 21595390.966659 ->   LocalOrders: SendOrderToSubscribers, action: 1, FXBA::V2::ORDER::ENTRY:' \
 ' id = 10099850, action = 1, instr_name = EUR/USD, aggr_id = 10099850, external_id = , ifoco_params = , src_name = RZBM, ' \
@@ -116,10 +176,14 @@ def parse_initial_order(row, year, month, day):
         min_lot = float(re.search('min_lot = (.+?);', row).group(1))
         initial_order = Order(ms_time, exact_time, client_id, used_deal_id, requested_lot, requested_price,
                               side, instrument, flags, comment_text, min_lot)
-        return initial_order, False
+        return initial_order, False, 0
+    elif "LocalOrders: order ready to exec, order_id" in row:
+        order_id = int(re.search('order_id: (.+?)', row).group(1))
+        return Order(None, None, 1, None, None, None, None, None, None,
+                     None, None), True, order_id
     else:
         return Order(None, None, 1, None, None, None, None, None, None,
-                     None, None), True
+                     None, None), True, 0
 
 if __name__ == "__main__":
     year = 2015
