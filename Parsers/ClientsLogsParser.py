@@ -9,13 +9,15 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import re
+from pandas import HDFStore
 
 
 def client_parser(client_logs_path, year, month, day):
-    path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
+    path_for_IOC_orders = "C:\\Logs Examples\\local_orders.log"
     local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
     local_orders['IOCIndex'] = np.vectorize(parse_order_index)(local_orders[0], local_orders.index)
     order_indices = local_orders[local_orders['IOCIndex'] != 0].index
+    deal_storage = {}
     for starting_index in order_indices:
         order = parse_initial_order(local_orders.loc[starting_index, 0], year, month, day)
         deal = Deal(order)
@@ -24,12 +26,54 @@ def client_parser(client_logs_path, year, month, day):
             status = fill_client_deal_part(row, deal)
             if status == 'End of Deal':
                 print(status)
+                deal_storage[deal.order.ms_time] = deal.to_pandas_series_client_data_only()
                 break
-            elif j==499 and deal.executed_lot is None:
+            elif j==499 and deal.executed_lot is np.nan:
                 print("Need more raws")
                 print(row)
-    path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
-    limit_orders = pd.read_csv(path_for_Limit_orders, sep=":;", header=None)
+    data_matrix = pd.DataFrame(deal_storage).T.convert_objects()
+    return data_matrix
+    # path_for_Limit_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\limit_orders.csv"
+    # limit_orders = pd.read_csv(path_for_Limit_orders, sep=":;", header=np.nan)
+
+def fill_client_deal_part(row, deal):
+    if ('selected group' in row) and (deal.hedging_group is np.nan):
+        parse_hedging_group(deal, row)
+        return np.nan
+    elif ('order_id: ' in row) and (deal.order_id is np.nan):
+        parse_order_id(deal, row)
+        return np.nan
+    elif ('LocalOrders: SendOrderToSubscribers' in row) and (deal.aggr_id is np.nan):
+        parse_aggr_id_set_change_time(deal, row)
+        return np.nan
+    elif 'exist = ' in row:
+        parse_best_side_quote(deal, row)
+        return np.nan
+    elif 'price_tolerance =' in row:
+        parse_tolerance(deal, row)
+        return np.nan
+    elif ('exist = ' not in row) and ('FXBA::V2::BOOK2::ENTRY' in row):
+        parse_book_quote(deal, row)
+        return np.nan
+    elif ('validate price' in row):
+        parse_do_not_validate(deal,row)
+        return np.nan
+    elif ('process no better prices' in row):
+        parse_no_better_prices(deal, row)
+        return np.nan
+    elif ('LocalOrders: src deal: quote time (ms)' in row):
+        parse_quote_time(deal, row)
+        return np.nan
+    elif ('LocalOrders: src deal: LocalOrdersTypes::DEAL::REQ: FXBA::V2::DEAL::REQ:' in row):
+        parse_validation_price(deal, row)
+        return np.nan
+    elif ('LocalOrders: ---- FXBA::V2::ORDER::ENTRY:' in row):
+        parse_end_of_deal(deal, row)
+        return 'End of Deal'
+    else:
+        pass
+
+
 
 
 def parse_validation_price(deal, row):
@@ -52,54 +96,12 @@ def parse_end_of_deal(deal, row):
     deal.executed_lot, deal.executed_price = executed_lot, executed_price
 
 '00| 19:56:47.428 21637542.910265 ->   	don\'t validate price'
-
-
 def parse_do_not_validate(deal, row):
     fill_method_execution_time(deal, row, "End of Deal")
     deal.do_not_validate = True
 
-def fill_client_deal_part(row, deal):
-    if ('selected group' in row) and (deal.hedging_group is None):
-        parse_hedging_group(deal, row)
-        return None
-    elif ('order_id: ' in row) and (deal.order_id is None):
-        parse_order_id(deal, row)
-        return None
-    elif ('LocalOrders: SendOrderToSubscribers' in row) and (deal.aggr_id is None):
-        parse_aggr_id_set_change_time(deal, row)
-        return None
-    elif 'exist = ' in row:
-        parse_best_side_quote(deal, row)
-        return None
-    elif 'price_tolerance =' in row:
-        parse_tolerance(deal, row)
-        return None
-    elif ('exist = ' not in row) and ('FXBA::V2::BOOK2::ENTRY' in row):
-        parse_book_quote(deal, row)
-        return None
-    elif ('validate price' in row):
-        parse_do_not_validate(deal,row)
-        return None
-    elif ('process no better prices' in row):
-        parse_no_better_prices(deal, row)
-        return None
-    elif ('LocalOrders: src deal: quote time (ms)' in row):
-        parse_quote_time(deal, row)
-        return None
-    elif ('LocalOrders: src deal: LocalOrdersTypes::DEAL::REQ: FXBA::V2::DEAL::REQ:' in row):
-        parse_validation_price(deal, row)
-        return None
-    elif ('LocalOrders: ---- FXBA::V2::ORDER::ENTRY:' in row):
-        parse_end_of_deal(deal, row)
-        return 'End of Deal'
-    else:
-        pass
-
-
 '00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
 'price = 1.118420, volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
-
-
 def parse_best_side_quote(deal, row):
     fill_method_execution_time(deal, row, "Best Side")
     id = int(re.search('id = (.+?),', row).group(1))
@@ -117,11 +119,8 @@ def parse_best_side_quote(deal, row):
     else:
         pass
 
-
 '00| 08:14:14.390 21595390.966991 ->   FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, price = 1.118420, ' \
 'volume = 500000.000000, flags = 1, ord_data = vector, 0 entries'
-
-
 def parse_book_quote(deal, row):
     fill_method_execution_time(deal, row, "Get Quote")
     id = int(re.search('id = (.+?),', row).group(1))
@@ -133,28 +132,20 @@ def parse_book_quote(deal, row):
     client_quote = create_client_quote(id, side, price, instrument, book_type, size)
     deal.client_book.add_quote(client_quote)
 
-
 '00| 08:14:14.374 21595390.966874 ->   price_tolerance = 0.000005'
-
-
 def parse_tolerance(deal, row):
     fill_method_execution_time(deal, row, "Get Tolerance")
     deal.price_tolerance = float(re.search('price_tolerance = (.*)', row).group(1))
 
-
 '00| 08:14:14.390 21595390.967246 ->   	process no better prices'
-
-
 def parse_no_better_prices(deal, row):
     fill_method_execution_time(deal, row, "No better prices")
     deal.no_better_prices = True
-
 
 '00| 09:53:57.235 21601373.667698 ->   LocalOrders: src deal: quote time (ms): 1981'
 def parse_quote_time(deal, row):
     fill_method_execution_time(deal, row, "Quote Lifetime")
     deal.quote_lifetime = float(re.search('quote time \(ms\): (.*)', row).group(1))
-
 
 '00| 08:14:14.374 21595390.966659 ->   LocalOrders: SendOrderToSubscribers, action: 1, FXBA::V2::ORDER::ENTRY:' \
 ' id = 10099850, action = 1, instr_name = EUR/USD, aggr_id = 10099850, external_id = , ifoco_params = , src_name = RZBM, ' \
@@ -162,8 +153,6 @@ def parse_quote_time(deal, row):
 ' set_time = 130797692543744290, change_time = 130797692543744290, status = 2, user_order_id = F-69287, aggr_src_name = RZBM, ' \
 'avg_exec_price = 0.000000, show_lot = 1000000000000.000000, exec_type = 5, tif = 1, tif_time = 0, flags = 1, ' \
 'comment_text = |FIX|, ver = 0, uid = 0, client_id = 183, min_lot = 0.000000'
-
-
 def parse_aggr_id_set_change_time(deal, row):
     fill_method_execution_time(deal, row, 'Generate Order')
     aggr_id = int(re.search('aggr_id = (.+?),', row).group(1))
@@ -173,21 +162,17 @@ def parse_aggr_id_set_change_time(deal, row):
 
 
 '00| 08:14:14.374 21595390.966573 ->   	 order_id: 10099850'
-
-
 def parse_order_id(deal, row):
     fill_method_execution_time(deal, row, 'Generating Order Id')
     order_id = int(re.search('order_id: (.*)', row).group(1))
     deal.order_id = order_id
 
-
 '00| 08:14:14.374 21595390.966803 ->     selected group 8'
 def parse_hedging_group(deal, row):
     fill_method_execution_time(deal, row, 'Choosing Hedging Group')
-    if deal.hedging_group is None:
+    if deal.hedging_group is np.nan:
         group = int(re.search('selected group (.*)', row).group(1))
         deal.set_hedging_group(group)
-
 
 def fill_method_execution_time(deal, row, type_name):
     exact_time = float(row.split('->')[0].split(' ')[2])
@@ -198,8 +183,6 @@ def fill_method_execution_time(deal, row, type_name):
 'instr_name = EUR/USD, side = 0, lot = 50000.000000, price = 1.118520, user_deal_id = F-69287, client_id = 183, flags = 1, ' \
 'checker1 = 933261842, stp_trader_name = , send_aggr_id = , ib_commission = 0.000000, comment_text = |FIX|, min_lot = 0.000000; ' \
 'aggr_id = , order_id = , value_date = 1601/01/01, full_lot = 50 000, ib_profit_usd = 0.0, cl_aggr_id = , cl_req_price = 1.11852'
-
-
 def parse_initial_order(row, year, month, day):
     part = row.split('->')[0]
     first = part.split(' ')
@@ -207,7 +190,7 @@ def parse_initial_order(row, year, month, day):
     exact_time = float(first[2])
 
     instrument = re.search('instr_name = (.+?),', row).group(1)
-    side = re.search('side = (.+?),', row).group(1)
+    side = int(re.search('side = (.+?),', row).group(1))
     requested_lot = float(re.search('lot = (.+?),', row).group(1))
     requested_price = float(re.search('price = (.+?),', row).group(1))
     used_deal_id = re.search('user_deal_id = (.+?),', row).group(1)
@@ -232,4 +215,4 @@ if __name__ == "__main__":
     month = 6
     day = 26
     client_logs_path = "HUY"
-    client_parser(client_logs_path, year, month, day)
+    sample_deals = client_parser(client_logs_path, year, month, day)

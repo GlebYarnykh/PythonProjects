@@ -1,12 +1,12 @@
 import pandas as pd
 
 __author__ = 'ruayhg'
-root_path = 'C:\\Users\\ruayhg\\PycharmProjects\\PythonProjects\\'
+root_path = 'C:\\Logs Examples\\'
 
 def get_sdt_side(side_int):
     if side_int == 0:
         return "Buy"
-    elif side_int ==1:
+    elif side_int == 1:
         return "Sell"
     else:
         return "Unknown side"

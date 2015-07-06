@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-client_id_map_path = root_path + 'GlobalLogsToRead\\client_id_map.csv'
+client_id_map_path = root_path + 'client_id_map.csv'
 client_id_map = client_names_parser(client_id_map_path)
 client_id_map.loc[1, "Name"] = "NullClient"
 
