@@ -1,7 +1,7 @@
 import pandas as pd
-
+import numpy as np
 __author__ = 'ruayhg'
-root_path = 'C:\\Logs Examples\\'
+root_path = 'C:\\Users\\ruayhg\\PycharmProjects\\PythonProjects\\GlobalLogsToRead\\'
 
 def get_sdt_side(side_int):
     if side_int == 0:
@@ -13,7 +13,7 @@ def get_sdt_side(side_int):
 
 def get_sdt_deal_flags_representation(flag_int):
     if flag_int == 0:
-        return None
+        return np.nan
     elif flag_int == 1:
         return "FOK"
     elif flag_int == 2:

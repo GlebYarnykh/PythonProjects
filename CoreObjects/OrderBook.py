@@ -22,11 +22,11 @@ class OrderBookSide(object):
 
 class BookSide(OrderBookSide):
     def __init__(self, source_type, side):
-        super(source_type, side)
+        super().__init__(source_type, side)
 
 class BandSide(OrderBookSide):
     def __init__(self, source_type, side):
-        super(source_type, side)
+        super().__init__(source_type, side)
 
 
 class OrderBook(object):

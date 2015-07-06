@@ -13,7 +13,7 @@ from pandas import HDFStore
 
 
 def client_parser(client_logs_path, year, month, day):
-    path_for_IOC_orders = "C:\\Logs Examples\\local_orders.log"
+    path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
     local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
     local_orders['IOCIndex'] = np.vectorize(parse_order_index)(local_orders[0], local_orders.index)
     order_indices = local_orders[local_orders['IOCIndex'] != 0].index

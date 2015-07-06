@@ -10,7 +10,7 @@ from pandas import HDFStore
 pd.set_option('io.hdf.default_format', 'table')
 
 # date_generated = [start_date + timedelta(days=x) for x in range(0, (end_date-start_date).days)]
-output = 'F:\\DataBase\\Deals.h5'
+output = 'C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\Deals.h5'
 store = HDFStore(output)
 
 client_only_non_mixed_types = ['ExactTime', 'ClientName', 'Side', 'Instrument', 'ReqLot', 'ReqPrice', 'MinLot', 'Flag',
