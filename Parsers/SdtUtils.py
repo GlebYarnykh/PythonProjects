@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 __author__ = 'ruayhg'
-root_path = 'C:\\Users\\ruayhg\\PycharmProjects\\PythonProjects\\GlobalLogsToRead\\'
+root_path = 'C:\\Users\\Gleb\\PythonProjects\\PythonProjects\\GlobalLogsToRead\\'
 
 def get_sdt_side(side_int):
     if side_int == 0:

@@ -13,7 +13,7 @@ from pandas import HDFStore
 
 
 def client_parser(client_logs_path, year, month, day):
-    path_for_IOC_orders = "C:\\Users\\ruayhg\\PycharmProjects\\BigLogs\\local_orders.log"
+    path_for_IOC_orders = "C:\\Logs Examples\\local_orders.log"
     local_orders = pd.read_csv(path_for_IOC_orders, sep=":;", header=None)
     local_orders['IOCIndex'] = np.vectorize(parse_order_index)(local_orders[0], local_orders.index)
     order_indices = local_orders[local_orders['IOCIndex'] != 0].index
@@ -25,7 +25,7 @@ def client_parser(client_logs_path, year, month, day):
         for j, row in deal_array.iteritems():
             status = fill_client_deal_part(row, deal)
             if status == 'End of Deal':
-                print(status)
+                print(status, deal.order.ms_time, deal.aggr_id)
                 deal_storage[deal.order.ms_time] = deal.to_pandas_series_client_data_only()
                 break
             elif j==499 and deal.executed_lot is np.nan:
@@ -97,7 +97,7 @@ def parse_end_of_deal(deal, row):
 
 '00| 19:56:47.428 21637542.910265 ->   	don\'t validate price'
 def parse_do_not_validate(deal, row):
-    fill_method_execution_time(deal, row, "End of Deal")
+    fill_method_execution_time(deal, row, "Do not validate price")
     deal.do_not_validate = True
 
 '00| 08:14:14.374 21595390.966858 ->   bid  : exist = 1, FXBA::V2::BOOK2::ENTRY: id = 0, action = 8, type = 0, ' \
