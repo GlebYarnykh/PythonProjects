@@ -32,9 +32,11 @@ class BandSide(OrderBookSide):
 class OrderBook(object):
     def __init__(self, bands_book_type, source_type):
         if bands_book_type == 0:
+            self.type = 'Book'
             self.bid_side = BookSide(source_type, "Bid")
             self.ask_side = BookSide(source_type, "Ask")
         else:
+            self.type = 'Bands'
             self.bid_side = BandSide(source_type, "Bid")
             self.ask_side = BandSide(source_type, "Ask")
 

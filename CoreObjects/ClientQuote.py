@@ -9,7 +9,7 @@ def create_client_quote(quote_id, side, price, instrument, book_type, size):
         string_side = "Ask"
     else:
         string_side = "Bid"
-    if book_type == 1:
+    if book_type == 0:
         quoting_type = "Book"
     else:
         quoting_type = "Bands"
