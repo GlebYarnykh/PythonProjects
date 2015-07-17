@@ -31,6 +31,8 @@ class BandSide(OrderBookSide):
 
 class OrderBook(object):
     def __init__(self, bands_book_type, source_type):
+        self.book_capacity = 0
+        self.current_entries = 0
         if bands_book_type == 0:
             self.type = 'Book'
             self.bid_side = BookSide(source_type, "Bid")

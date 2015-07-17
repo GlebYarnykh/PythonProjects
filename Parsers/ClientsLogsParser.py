@@ -2,7 +2,7 @@ from CoreObjects.Deal import Deal
 from Parsers.Index_parsers import parse_ioc_index, parse_limit_index, parse_marination_index
 from Parsers.Initial_parsers import parse_initial_limit_order, parse_initial_ioc_order
 from Parsers.Rows_parsers import fill_client_deal_part
-from Parsers.SdtManagerFiles import get_manager_deals, get_limit_orders_file_sdt, get_pnls
+from Parsers.SdtManagerFiles import get_manager_deals, get_limit_orders_file_sdt, get_comission_file_sdt
 
 __author__ = 'ruayhg'
 
@@ -12,10 +12,14 @@ import re
 
 manager_deals = get_manager_deals()
 orders_sdt = get_limit_orders_file_sdt()
+comes_sdt = get_comission_file_sdt()
 
-
-def client_parser(client_logs_path, year, month, day):
-    general_path = ""
+def client_parser(date):
+    string_date = date.strftime("%Y.%m.%d")
+    year = date.year
+    month = date.month
+    day = date.day
+    general_path = 'M:\\logs\\cl_srv2-trade\\' + string_date
     # Get Local_orders file
     local_orders = get_local_orders(general_path)
 
@@ -33,12 +37,16 @@ def client_parser(client_logs_path, year, month, day):
     # Merge limit and ioc orders
     deals = pd.concat([ioc_orders, limit_orders])
     # Get PNL, SoftPNL from FX Aggregator
-    deals['Pnl'], deals['SoftPnl'] = np.vectorize(get_pnls)(deals['AggrId'])
+    deals['Pnl'], deals['SoftPnl'], deals['NetPnl'] = np.vectorize(get_pnls)(deals['AggrId'])
+    deals = deals.convert_objects()
+    deals[['Pnl', 'SoftPnl', 'NetPnl']] = deals[['Pnl', 'SoftPnl', 'NetPnl']].fillna(0.0)
     return deals
 
 def get_local_orders(general_path):
-    path_for_local_orders_log = "C:\\Logs Examples\\local_orders.log"
+    path_for_local_orders_log = general_path + "\\local_orders.log"
     local_orders = pd.read_csv(path_for_local_orders_log, sep=":;", header=None)
+    local_orders.dropna(how='all', inplace=True)
+    local_orders.reset_index(inplace=True)
     # Get Limit/IOC Indices
     local_orders['IOCIndex'] = np.vectorize(parse_ioc_index)(local_orders[0], local_orders.index)
     local_orders['OrderIndex'] = np.vectorize(parse_limit_index)(local_orders[0])
@@ -71,8 +79,12 @@ def get_ioc_orders(local_orders, marination_times, year, month, day):
     order_indices = local_orders[local_orders['IOCIndex'] != 0].index
     deal_storage = {}
     for starting_index in order_indices:
+
         order = parse_initial_ioc_order(local_orders.loc[starting_index, 0], year, month, day)
-        marination_time = marination_times[order.user_deal_id]
+        if order.user_deal_id in marination_times.keys():
+            marination_time = marination_times[order.user_deal_id]
+        else:
+            marination_time = (0.0,0.0)
         deal = Deal(order, marination_time[0], marination_time[1])
         deal_array = local_orders.loc[starting_index:(starting_index + 500), 0]
         for j, row in deal_array.iteritems():
@@ -89,7 +101,7 @@ def get_ioc_orders(local_orders, marination_times, year, month, day):
     return data_matrix
 
 def get_marination_times(path_for_marination, year, month, day):
-    path_for_marination = "C:\\Logs Examples\\mc_mngr.log"
+    path_for_marination = path_for_marination + '\\mc_mngr.log'
     marination = pd.read_csv(path_for_marination, sep=":;", header=None)
     marination.dropna(how="all", inplace=True)
     marination['OrderIndex'] = np.vectorize(parse_marination_index)(marination[0], marination.index)
@@ -114,6 +126,23 @@ def get_marination_times(path_for_marination, year, month, day):
         marination_storage[user_deal_id] = marination_time, real_marination_time
     return marination_storage
 
+def get_pnls(aggr_id):
+    pnl = manager_deals.loc[manager_deals['Aggr Id'] == aggr_id, 'Profit']
+    if not pnl.empty:
+        pnl_final = float(pnl.values[0])
+    else:
+        pnl_final = 0.0
+    soft_pnl = manager_deals.loc[manager_deals['Aggr Id'] == aggr_id, 'SoftPnL(USD)']
+    if not soft_pnl.empty:
+        soft_pnl_final = float(soft_pnl.values[0])
+    else:
+        soft_pnl_final = 0.0
+    if aggr_id in comes_sdt.index.tolist():
+        comes = comes_sdt.loc[aggr_id]
+        net_pnl = pnl_final - comes
+    else:
+        net_pnl = pnl_final
+    return pnl_final, soft_pnl_final, net_pnl
 
 '00| 09:53:58.249 21601374.672032 ->   LocalOrders: ---- FXBA::V2::ORDER::ENTRY: id = 10100160, action = 1, ' \
 'instr_name = USD/RUB_TOM, aggr_id = 10100160, external_id = , ifoco_params = , src_name = RZBM, trader = psbf.api,' \

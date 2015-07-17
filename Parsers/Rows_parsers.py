@@ -13,7 +13,7 @@ def fill_client_deal_part(row, deal):
         return np.nan
     # elif ('order_id: ' in row) and (deal.order_id is np.nan):
     #     return np.nan
-    elif ('LocalOrders: SendOrderToSubscribers, action: 4' in row) and (deal.aggr_id is np.nan):
+    elif ('LocalOrders: SendOrderToSubscribers, action: 4' in row) and (str(deal.order_id) in row):
         parse_aggr_id_set_change_time(deal, row)
         return 'End of Deal'
     elif 'exist = ' in row:
@@ -21,6 +21,9 @@ def fill_client_deal_part(row, deal):
         return np.nan
     elif 'price_tolerance =' in row:
         parse_tolerance(deal, row)
+        return np.nan
+    elif ('current book, entries count' in row):
+        parse_initial_book_capasity(deal, row)
         return np.nan
     elif ('exist = ' not in row) and ('FXBA::V2::BOOK2::ENTRY' in row):
         parse_book_quote(deal, row)
@@ -43,11 +46,17 @@ def fill_client_deal_part(row, deal):
     else:
         pass
 
+def parse_initial_book_capasity(deal, row):
+    fill_method_execution_time(deal, row, "Initial Book Capacity")
+    entries = int(re.search('entries count: (.*)', row).group(1))
+    deal.client_book.book_capacity = entries
+
 
 def parse_validation_price_and_order_id(deal, row):
     fill_method_execution_time(deal, row, "Validate Price")
     deal.validation_price = float(re.search(' price = (.+?),', row).group(1))
-    deal.order_id = int(re.search('order_id = (.+?),', row).group(1))
+    deal.order_id = int(re.search(' order_id = (.+?),', row).group(1))
+    deal.aggr_id = int(re.search(' aggr_id = (.+?),', row).group(1))
 
 
 def parse_end_of_deal(deal, row):
@@ -95,7 +104,9 @@ def parse_book_quote(deal, row):
         deal.best_bid = client_quote
     if deal.client_book is np.nan:
         deal.client_book = OrderBook(book_type, "ClientBook")
-    deal.client_book.add_quote(client_quote)
+    if deal.client_book.current_entries < deal.client_book.book_capacity:
+        deal.client_book.add_quote(client_quote)
+        deal.client_book.current_entries += 1
 
 
 def parse_tolerance(deal, row):
@@ -115,10 +126,11 @@ def parse_quote_time(deal, row):
 
 def parse_aggr_id_set_change_time(deal, row):
     fill_method_execution_time(deal, row, 'Generate Order')
-    aggr_id = int(re.search('aggr_id = (.+?),', row).group(1))
     set_time = int(re.search('set_time = (.+?),', row).group(1))
     change_time = int(re.search('change_time = (.+?),', row).group(1))
-    deal.aggr_id, deal.set_time, deal.change_time = aggr_id, set_time, change_time
+    exact_time = float(row.split('->')[0].split(' ')[2])
+    deal.end_of_deal = exact_time
+    deal.set_time, deal.change_time = set_time, change_time
 
 
 def parse_order_id(deal, row):

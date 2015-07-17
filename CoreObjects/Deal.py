@@ -34,6 +34,7 @@ class Deal(object):
         self.validation_price = np.nan
         self.executed_lot = np.nan
         self.executed_price = np.nan
+        self.end_of_deal = np.nan
         self.pnl = np.nan
         self.soft_pnl = np.nan
         # Filled from aggr_trade logs
@@ -68,10 +69,10 @@ class Deal(object):
                 self.price_tolerance, self.client_book.bid_side.quotes, self.client_book.ask_side.quotes,
                 self.do_not_validate, self.no_better_prices, self.quote_lifetime, self.validation_price,
                 self.executed_lot, self.executed_price, self.set_time, self.change_time, self.marination_time,
-                self.unexpected_marination_time]
+                self.unexpected_marination_time, self.end_of_deal]
         index = ['OrderType', 'ExactTime', 'ClientName', 'Side', 'AggrId', 'OrderId', 'Instrument', 'ReqLot', 'ReqPrice', 'MinLot', 'Flag',
                  'SdtMethodsExecution', 'HedgingGroup', 'GroupId', 'BestAsk', 'BestBid', 'Tolerance', 'BidQuotes',
                  'AskQuotes', 'DoNotValidate', 'NoBetterPrices', 'QuoteLifetime', 'ValPrice', 'ExecLot', 'ExecPrice',
-                 'SetTime', 'ChangeTime', 'Marination', 'UnexpectedMarination']
+                 'SetTime', 'ChangeTime', 'Marination', 'UnexpectedMarination', 'EndOfDeal']
 
         return pd.Series(data=data, index=index)
