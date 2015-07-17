@@ -79,13 +79,14 @@ def get_ioc_orders(local_orders, marination_times, year, month, day):
     order_indices = local_orders[local_orders['IOCIndex'] != 0].index
     deal_storage = {}
     for starting_index in order_indices:
-
         order = parse_initial_ioc_order(local_orders.loc[starting_index, 0], year, month, day)
         if order.user_deal_id in marination_times.keys():
             marination_time = marination_times[order.user_deal_id]
         else:
             marination_time = (0.0,0.0)
         deal = Deal(order, marination_time[0], marination_time[1])
+        if deal.order.ms_time in deal_storage.keys():
+            continue
         deal_array = local_orders.loc[starting_index:(starting_index + 500), 0]
         for j, row in deal_array.iteritems():
             status = fill_client_deal_part(row, deal)

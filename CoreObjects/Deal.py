@@ -28,6 +28,8 @@ class Deal(object):
         self.best_ask = np.nan
         self.price_tolerance = np.nan
         self.client_book = np.nan
+        self.book_capacity = 0
+        self.current_entries = 0
         self.do_not_validate = False
         self.no_better_prices = False
         self.quote_lifetime = np.nan

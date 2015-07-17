@@ -49,7 +49,7 @@ def fill_client_deal_part(row, deal):
 def parse_initial_book_capasity(deal, row):
     fill_method_execution_time(deal, row, "Initial Book Capacity")
     entries = int(re.search('entries count: (.*)', row).group(1))
-    deal.client_book.book_capacity = entries
+    deal.book_capacity = entries
 
 
 def parse_validation_price_and_order_id(deal, row):
@@ -104,9 +104,9 @@ def parse_book_quote(deal, row):
         deal.best_bid = client_quote
     if deal.client_book is np.nan:
         deal.client_book = OrderBook(book_type, "ClientBook")
-    if deal.client_book.current_entries < deal.client_book.book_capacity:
+    if deal.current_entries < deal.book_capacity:
         deal.client_book.add_quote(client_quote)
-        deal.client_book.current_entries += 1
+        deal.current_entries += 1
 
 
 def parse_tolerance(deal, row):
