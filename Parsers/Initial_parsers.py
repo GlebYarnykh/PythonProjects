@@ -27,6 +27,8 @@ def parse_initial_limit_order(order_id, limit_orders, local_orders, year,month,d
 
 
 def parse_initial_ioc_order(row, year, month, day):
+    if 'i00|' in row:
+        return 'Skip'
     part = row.split('->')[0]
     first = part.split(' ')
     ms_time = datetime.strptime(first[1], '%H:%M:%S.%f').replace(year=year, month=month, day=day)

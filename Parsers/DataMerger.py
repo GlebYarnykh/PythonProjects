@@ -16,7 +16,6 @@ def Data_merger(type, pattern):
 
     Deals = pd.DataFrame()
     for i in files_list:
-        print(i)
         data = pd.read_csv(i, sep=";", decimal = ",", na_values='-')
         if 'Time (Local)' in data.columns.tolist():
             data = data.rename(columns = {'Time (Local)': 'Time'})
@@ -51,7 +50,6 @@ def Data_merger(type, pattern):
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(str)
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(lambda x: x[:-4] if '-' in x else x)
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(int)
-    Deals['Connection Type'] = Deals['Trader'].apply(lambda x: x[:-4] if ('.' in x) else 'Manual')
     return Deals
 
 def comission_array(Deals):

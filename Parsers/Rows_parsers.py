@@ -90,23 +90,24 @@ def parse_best_side_quote(deal, row):
 
 
 def parse_book_quote(deal, row):
-    fill_method_execution_time(deal, row, "Get Quote")
-    id = int(re.search('id = (.+?),', row).group(1))
-    side = int(re.search('type = (.+?),', row).group(1))
-    price = float(re.search(' price = (.+?),', row).group(1))
-    instrument = deal.order.ccy_pair
-    book_type = int(re.search('flags = (.+?),', row).group(1))
-    size = float(re.search('volume = (.+?),', row).group(1))
-    client_quote = create_client_quote(id, side, price, instrument, book_type, size)
-    if (client_quote.Side == 'Ask') and (deal.best_ask is np.nan):
-        deal.best_ask = client_quote
-    elif (client_quote.Side == 'Bid') and (deal.best_bid is np.nan):
-        deal.best_bid = client_quote
-    if deal.client_book is np.nan:
-        deal.client_book = OrderBook(book_type, "ClientBook")
-    if deal.current_entries < deal.book_capacity:
-        deal.client_book.add_quote(client_quote)
-        deal.current_entries += 1
+    if not 'm00' in row:
+        fill_method_execution_time(deal, row, "Get Quote")
+        id = int(re.search('id = (.+?),', row).group(1))
+        side = int(re.search('type = (.+?),', row).group(1))
+        price = float(re.search(' price = (.+?),', row).group(1))
+        instrument = deal.order.ccy_pair
+        book_type = int(re.search('flags = (.+?),', row).group(1))
+        size = float(re.search('volume = (.+?),', row).group(1))
+        client_quote = create_client_quote(id, side, price, instrument, book_type, size)
+        if (client_quote.Side == 'Ask') and (deal.best_ask is np.nan):
+            deal.best_ask = client_quote
+        elif (client_quote.Side == 'Bid') and (deal.best_bid is np.nan):
+            deal.best_bid = client_quote
+        if deal.client_book is np.nan:
+            deal.client_book = OrderBook(book_type, "ClientBook")
+        if deal.current_entries < deal.book_capacity:
+            deal.client_book.add_quote(client_quote)
+            deal.current_entries += 1
 
 
 def parse_tolerance(deal, row):

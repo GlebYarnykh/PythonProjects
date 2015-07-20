@@ -37,9 +37,10 @@ def client_parser(date):
     # Merge limit and ioc orders
     deals = pd.concat([ioc_orders, limit_orders])
     # Get PNL, SoftPNL from FX Aggregator
-    deals['Pnl'], deals['SoftPnl'], deals['NetPnl'] = np.vectorize(get_pnls)(deals['AggrId'])
-    deals = deals.convert_objects()
-    deals[['Pnl', 'SoftPnl', 'NetPnl']] = deals[['Pnl', 'SoftPnl', 'NetPnl']].fillna(0.0)
+    if not deals.empty:
+        deals['Pnl'], deals['SoftPnl'], deals['NetPnl'] = np.vectorize(get_pnls)(deals['AggrId'])
+        deals = deals.convert_objects()
+        deals[['Pnl', 'SoftPnl', 'NetPnl']] = deals[['Pnl', 'SoftPnl', 'NetPnl']].fillna(0.0)
     return deals
 
 def get_local_orders(general_path):
@@ -80,6 +81,8 @@ def get_ioc_orders(local_orders, marination_times, year, month, day):
     deal_storage = {}
     for starting_index in order_indices:
         order = parse_initial_ioc_order(local_orders.loc[starting_index, 0], year, month, day)
+        if order == 'Skip':
+            continue
         if order.user_deal_id in marination_times.keys():
             marination_time = marination_times[order.user_deal_id]
         else:
@@ -112,8 +115,12 @@ def get_marination_times(path_for_marination, year, month, day):
     for starting_index in marination_indices:
         row = marination.at[starting_index, 0]
         user_deal_id = re.search('user_deal_id = (.+?),', row).group(1)
-        start = float(row.split('->')[0].split(' ')[2])
-        subsequent_array = marination.loc[starting_index:(starting_index + 500), 0]
+        if not 's' in row.split('->')[0].split(' ')[2]:
+            start = float(row.split('->')[0].split(' ')[2])
+        else:
+            continue
+        end_index = min(starting_index + 500, marination.index.max())
+        subsequent_array = marination.loc[starting_index:end_index, 0]
         for i, row in subsequent_array.iteritems():
             if "Try Deal: FXBA::V2::DEAL::REQ:" in row:
                 end = float(row.split('->')[0].split(' ')[2])
