@@ -50,6 +50,7 @@ def Data_merger(type, pattern):
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(str)
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(lambda x: x[:-4] if '-' in x else x)
     Deals['Aggr Id'] = Deals['Aggr Id'].apply(int)
+    Deals['Connection Type'] = Deals['Trader'].apply(lambda x: x[-4:] if '.' in x else 'Manual')
     return Deals
 
 def comission_array(Deals):
