@@ -27,26 +27,26 @@ def get_client_order_book(aggr_id, index):
     bool = pd.to_datetime(index) > datetime(2015,4,25)
     if bool:
         try:
-            bid_quotes = deals_store1.select(bid_path)
+            bid_quotes = deals_store1.select(bid_path).drop_duplicates(subset='QuoteId', take_last=False)
             bid_aval = 1
         except KeyError:
             bid_quotes = pd.DataFrame()
             bid_aval = 0
         try:
-            ask_quotes = deals_store1.select(ask_path)
+            ask_quotes = deals_store1.select(ask_path).drop_duplicates(subset='QuoteId', take_last=False)
             ask_aval = 1
         except KeyError:
             ask_quotes = pd.DataFrame()
             ask_aval = 0
     else:
         try:
-            bid_quotes = deals_store2.select(bid_path)
+            bid_quotes = deals_store2.select(bid_path).drop_duplicates(subset='QuoteId', take_last=False)
             bid_aval = 1
         except KeyError:
             bid_quotes = pd.DataFrame()
             bid_aval = 0
         try:
-            ask_quotes = deals_store2.select(ask_path)
+            ask_quotes = deals_store2.select(ask_path).drop_duplicates(subset='QuoteId', take_last=False)
             ask_aval = 1
         except KeyError:
             ask_quotes = pd.DataFrame()
@@ -152,6 +152,12 @@ def get_all_deals(include_hedging_deals, global_start, global_cutoff, client_nam
             LPs = sizes.loc[(sizes['Trader']=='DEALER')&(sizes['Aggr Id']==aggr_id), ['Source', 'Instrument', 'Amount', 'CCY1 Amount', 'Price', 'Time', 'Dealer Side (Pair)', 'Result']]
             return LPs.sort('Price', )
         deals['HedgingDeals'] = np.vectorize(get_hedging_deals)(deals['AggrId'])
+    deals['DealTime'] = deals['EndOfDeal'] - deals['ExactTime']
+    deals['SpreadForSize'] = deals['AskForSize'] - deals['BidForSize']
+    deals['Count'] = 1
+    deals['EBS_Indicator'] = deals.apply(lambda row: 1 if ('EBS' in row['HedgingDeals']['Source'].tolist()) else 0, axis=1)
+    deals['IncomingSpread'] = deals['SpreadForSize'] - 2*deals['Margin']
+    deals['NetMargin'] = deals['NetPnl']/deals['ExecLot']
     return deals
 
 def get_target_bidask(aggr_id, size, bid_quotes, ask_quotes, bid_aval, ask_aval, best_bid, best_ask):
